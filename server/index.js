@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import "dotenv/config";
+import { bbSummarizeAndStore, bbChat } from "./backboard.js";
+
 
 const app = express();
 app.use(cors());
@@ -11,27 +13,32 @@ app.get("/api/health", (req, res) => {
   res.json({ ok: true });
 });
 
-// Day 1: stub summarizer (replace with Backboard tomorrow)
 app.post("/api/add-session", async (req, res) => {
-  const { transcript, sessionNumber } = req.body;
+  try {
+    const { transcript, sessionNumber } = req.body;
+    if (!transcript) return res.status(400).json({ error: "Missing transcript" });
 
-  if (!transcript) {
-    return res.status(400).json({ error: "Missing transcript" });
+    const note = await bbSummarizeAndStore({ transcript, sessionNumber });
+    res.json({ note });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message || "add-session failed" });
   }
-
-  // Fake “structured note” for now
-  const note = `SESSION #${sessionNumber ?? 1}
-Summary:
-- Client discussed stress and sleep issues
-- Reported anxiety increasing during the week
-Themes: anxiety, sleep, work stress
-Risk flags: none noted
-Next session focus:
-- Sleep routine
-- Coping strategies`;
-
-  res.json({ note });
 });
+
+app.post("/api/chat", async (req, res) => {
+  try {
+    const { question } = req.body;
+    if (!question) return res.status(400).json({ error: "Missing question" });
+
+    const answer = await bbChat({ question });
+    res.json({ answer });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message || "chat failed" });
+  }
+});
+
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => console.log(`Server listening on http://localhost:${PORT}`));
