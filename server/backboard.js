@@ -1,18 +1,43 @@
 import "dotenv/config";
+import fs from "fs";
+import path from "path";
 
 const API_KEY = process.env.BACKBOARD_API_KEY;
 const BASE_URL = process.env.BACKBOARD_BASE_URL || "https://app.backboard.io/api";
 
 if (!API_KEY) throw new Error("Missing BACKBOARD_API_KEY in server/.env");
 
-const HEADERS = {
-  "X-API-Key": API_KEY,
-};
+const HEADERS = { "X-API-Key": API_KEY };
 
-let assistantId = null;
-let threadId = null;
+// Persist assistant + client thread mapping
+const STORE_PATH = path.join(process.cwd(), "backboard_store.json");
 
-// ---------- internal helpers ----------
+function loadStore() {
+  try {
+    return JSON.parse(fs.readFileSync(STORE_PATH, "utf8"));
+  } catch {
+    return { assistantId: null, threadsByClient: {}, sessionsByClient: {} };
+  }
+}
+
+function saveStore(store) {
+  fs.writeFileSync(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
+}
+
+function recordSession(clientId, sessionObj) {
+  store.sessionsByClient ||= {};
+  store.sessionsByClient[clientId] ||= [];
+  store.sessionsByClient[clientId].push(sessionObj);
+  saveStore(store);
+}
+
+
+let store = loadStore();
+store.threadsByClient ||= {};
+store.sessionsByClient ||= {};
+
+
+// ---- helpers ----
 async function bbPost(url, { json, form } = {}) {
   const opts = { method: "POST", headers: { ...HEADERS } };
 
@@ -20,7 +45,6 @@ async function bbPost(url, { json, form } = {}) {
     opts.headers["Content-Type"] = "application/json";
     opts.body = JSON.stringify(json);
   } else if (form) {
-    // Backboard quickstart uses form-style "data"
     opts.headers["Content-Type"] = "application/x-www-form-urlencoded";
     opts.body = new URLSearchParams(form).toString();
   }
@@ -31,34 +55,61 @@ async function bbPost(url, { json, form } = {}) {
   return data;
 }
 
-async function ensureAssistantAndThread() {
-  if (assistantId && threadId) return { assistantId, threadId };
+async function ensureAssistant() {
+  if (store.assistantId) return store.assistantId;
 
-  // 1) Create assistant
   const a = await bbPost(`${BASE_URL}/assistants`, {
     json: {
       name: "Therapy Notes Assistant",
       description:
-        "Therapist-facing documentation + memory assistant. Summarizes transcripts into structured notes and answers therapist questions based on past saved notes. Do not diagnose or provide medical advice.",
+        "Therapist-facing documentation + memory assistant. Summarizes transcripts into structured notes and answers therapist questions based on saved notes. Do not diagnose or provide medical advice.",
     },
   });
-  assistantId = a.assistant_id;
 
-  // 2) Create thread
+  store.assistantId = a.assistant_id;
+  saveStore(store);
+
+  console.log("[Backboard] assistant_id:", store.assistantId);
+  return store.assistantId;
+}
+
+async function ensureThreadForClient(clientId) {
+  if (!clientId) throw new Error("Missing clientId");
+
+  const assistantId = await ensureAssistant();
+
+  // If exists, return it
+  const existing = store.threadsByClient?.[clientId];
+  if (existing) return existing;
+
+  // Create new thread under assistant
   const t = await bbPost(`${BASE_URL}/assistants/${assistantId}/threads`, {
     json: {},
   });
-  threadId = t.thread_id;
 
-  console.log("[Backboard] assistant_id:", assistantId);
-  console.log("[Backboard] thread_id:", threadId);
+  const threadId = t.thread_id;
+  store.threadsByClient[clientId] = threadId;
+  saveStore(store);
 
-  return { assistantId, threadId };
+  console.log(`[Backboard] created thread for ${clientId}:`, threadId);
+  return threadId;
 }
 
-// ---------- exported functions ----------
-export async function bbSummarizeAndStore({ transcript, sessionNumber }) {
-  await ensureAssistantAndThread();
+// (Optional) for demo: reset one client or all clients
+export async function bbResetClient(clientId) {
+  if (!clientId) throw new Error("Missing clientId");
+  delete store.threadsByClient[clientId];
+  saveStore(store);
+}
+
+export async function bbResetAll() {
+  store = { assistantId: null, threadsByClient: {} };
+  saveStore(store);
+}
+
+// ---- exported: summarize + store per client ----
+export async function bbSummarizeAndStore({ clientId, transcript, sessionNumber }) {
+  const threadId = await ensureThreadForClient(clientId);
 
   const prompt = `
 You are a therapist documentation assistant for licensed clinicians.
@@ -76,13 +127,14 @@ Create a structured session note with:
 
 Return plain text.
 
+CLIENT: ${clientId}
 SESSION #: ${sessionNumber ?? 1}
 
 TRANSCRIPT:
 ${transcript}
 `.trim();
 
-  // 3) Send message (memory Auto)
+  // 3) Send message (memory Auto) to THIS client's thread
   const resp = await bbPost(`${BASE_URL}/threads/${threadId}/messages`, {
     form: {
       content: prompt,
@@ -91,11 +143,16 @@ ${transcript}
     },
   });
 
-  // Quickstart shows response.json().get("content")
-  // so we return resp.content
   const note = resp?.content ?? JSON.stringify(resp);
 
-  // Optional: store a clean “SESSION NOTE #n …” message too (improves retrieval)
+  recordSession(clientId, {
+  sessionNumber: sessionNumber ?? (store.sessionsByClient?.[clientId]?.length ?? 0) + 1,
+  createdAt: new Date().toISOString(),
+  note,
+});
+
+
+  // Store a clean “SESSION NOTE” message as well (helps retrieval)
   await bbPost(`${BASE_URL}/threads/${threadId}/messages`, {
     form: {
       content: `SESSION NOTE #${sessionNumber ?? 1}\n${note}`,
@@ -107,15 +164,16 @@ ${transcript}
   return note;
 }
 
-export async function bbChat({ question }) {
-  await ensureAssistantAndThread();
+export async function bbChat({ clientId, question }) {
+  const threadId = await ensureThreadForClient(clientId);
 
   const prompt = `
 You are a therapist-facing memory assistant.
-Use ONLY information that exists in saved session notes within this thread.
+Use ONLY information that exists in saved session notes within this client's thread.
 If the answer is not supported, say: "Not enough information in saved sessions."
-Always include: "Sessions used: #..." (infer session numbers from the notes when possible).
+Always include: "Sessions used: #..." when possible.
 
+CLIENT: ${clientId}
 Question:
 ${question}
 `.trim();
@@ -130,3 +188,8 @@ ${question}
 
   return resp?.content ?? JSON.stringify(resp);
 }
+export function bbGetSessions(clientId) {
+  store.sessionsByClient ||= {};
+  return store.sessionsByClient[clientId] || [];
+}
+
