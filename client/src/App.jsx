@@ -2,14 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 
 const API_BASE = "http://localhost:8080";
 
-const CLIENTS = [
-  { id: "client_a", name: "Client A" },
-  { id: "client_b", name: "Client B" },
-  { id: "client_c", name: "Client C" },
-];
-
 export default function App() {
-  const [clientId, setClientId] = useState(CLIENTS[0].id);
+  // Clients (loaded from server)
+  const [clients, setClients] = useState([]);
+  const [clientId, setClientId] = useState("");
+  const [newClientName, setNewClientName] = useState("");
+  const [creatingClient, setCreatingClient] = useState(false);
 
   // Add session
   const [transcript, setTranscript] = useState("");
@@ -27,21 +25,34 @@ export default function App() {
   const [asking, setAsking] = useState(false);
 
   const clientName = useMemo(
-    () => CLIENTS.find((c) => c.id === clientId)?.name ?? clientId,
-    [clientId]
+    () => clients.find((c) => c.id === clientId)?.name ?? clientId,
+    [clients, clientId]
   );
 
-  async function fetchSessions(forClientId = clientId) {
+  async function fetchClients() {
+    const res = await fetch(`${API_BASE}/api/clients`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error || "Failed to load clients");
+
+    setClients(data.clients || []);
+
+    // If no client selected yet, pick the first
+    if (!clientId && data.clients?.length) {
+      setClientId(data.clients[0].id);
+    }
+  }
+
+  async function fetchSessions(forClientId) {
+    if (!forClientId) return;
+
     setLoadingSessions(true);
     try {
       const res = await fetch(`${API_BASE}/api/clients/${forClientId}/sessions`);
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to load sessions");
-      setSessions(data.sessions || []);
 
-      // Auto-advance session number to next
-      const nextNum = (data.sessions?.length ?? 0) + 1;
-      setSessionNumber(nextNum);
+      setSessions(data.sessions || []);
+      setSessionNumber((data.sessions?.length ?? 0) + 1);
     } catch (err) {
       setSessions([]);
       console.error(err);
@@ -49,6 +60,11 @@ export default function App() {
       setLoadingSessions(false);
     }
   }
+
+  useEffect(() => {
+    fetchClients().catch(console.error);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     // when switching clients, clear UI + load that client’s sessions
@@ -60,7 +76,35 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
+  async function createClient() {
+    const name = newClientName.trim();
+    if (!name) return;
+
+    setCreatingClient(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/clients`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Failed to create client");
+
+      // refresh client list, then select the new one
+      await fetchClients();
+      setClientId(data.client.id);
+
+      setNewClientName("");
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setCreatingClient(false);
+    }
+  }
+
   async function generateAndSave() {
+    if (!clientId) return;
+
     setSaving(true);
     setNote("");
 
@@ -79,8 +123,6 @@ export default function App() {
       if (!res.ok) throw new Error(data?.error || "Request failed");
 
       setNote(data.note);
-
-      // refresh list so you immediately see the new session under the selected client
       await fetchSessions(clientId);
     } catch (err) {
       setNote(`Error: ${err.message}`);
@@ -90,6 +132,8 @@ export default function App() {
   }
 
   async function ask() {
+    if (!clientId) return;
+
     setAsking(true);
     setAnswer("");
 
@@ -121,11 +165,16 @@ export default function App() {
         Therapist-only demo. Each client has isolated memory (one Backboard thread per client).
       </p>
 
-      <div style={{ display: "flex", gap: 14, alignItems: "center", margin: "18px 0" }}>
+      {/* Client selector + create client */}
+      <div style={{ display: "flex", gap: 18, alignItems: "flex-end", margin: "18px 0" }}>
         <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <span style={{ fontSize: 12, color: "#666" }}>Select client</span>
-          <select value={clientId} onChange={(e) => setClientId(e.target.value)} style={{ padding: 8 }}>
-            {CLIENTS.map((c) => (
+          <select
+            value={clientId}
+            onChange={(e) => setClientId(e.target.value)}
+            style={{ padding: 8, minWidth: 220 }}
+          >
+            {clients.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>
@@ -133,8 +182,24 @@ export default function App() {
           </select>
         </label>
 
-        <div style={{ color: "#666", fontSize: 14 }}>
-          Viewing: <b>{clientName}</b>
+        <div style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
+          <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <span style={{ fontSize: 12, color: "#666" }}>Add new client</span>
+            <input
+              value={newClientName}
+              onChange={(e) => setNewClientName(e.target.value)}
+              placeholder="e.g., Sam"
+              style={{ padding: 8, minWidth: 220 }}
+            />
+          </label>
+
+          <button onClick={createClient} disabled={creatingClient || !newClientName.trim()}>
+            {creatingClient ? "Adding..." : "Add"}
+          </button>
+        </div>
+
+        <div style={{ color: "#666", fontSize: 14, marginLeft: "auto" }}>
+          Viewing: <b>{clientName || "—"}</b>
         </div>
       </div>
 
@@ -143,12 +208,14 @@ export default function App() {
         <div style={{ border: "1px solid #ddd", borderRadius: 10, padding: 14 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <h2 style={{ marginTop: 0 }}>Past Sessions</h2>
-            <button onClick={() => fetchSessions(clientId)} disabled={loadingSessions}>
+            <button onClick={() => fetchSessions(clientId)} disabled={loadingSessions || !clientId}>
               {loadingSessions ? "Refreshing..." : "Refresh"}
             </button>
           </div>
 
-          {loadingSessions ? (
+          {!clientId ? (
+            <p style={{ color: "#666" }}>Create or select a client to view sessions.</p>
+          ) : loadingSessions ? (
             <p style={{ color: "#666" }}>Loading sessions…</p>
           ) : sessions.length === 0 ? (
             <p style={{ color: "#666" }}>No sessions saved for this client yet.</p>
@@ -179,7 +246,6 @@ export default function App() {
 
         {/* RIGHT: Add session + chat */}
         <div style={{ display: "grid", gap: 18 }}>
-          {/* Add Session */}
           <div style={{ border: "1px solid #ddd", borderRadius: 10, padding: 14 }}>
             <h2 style={{ marginTop: 0 }}>Add Session</h2>
 
@@ -192,6 +258,7 @@ export default function App() {
                   value={sessionNumber}
                   onChange={(e) => setSessionNumber(Number(e.target.value))}
                   style={{ width: 110, padding: 8 }}
+                  disabled={!clientId}
                 />
               </label>
               <span style={{ color: "#777", fontSize: 12 }}>
@@ -203,12 +270,13 @@ export default function App() {
               value={transcript}
               onChange={(e) => setTranscript(e.target.value)}
               rows={10}
-              placeholder="Paste transcript here..."
+              placeholder={clientId ? "Paste transcript here..." : "Select a client first..."}
+              disabled={!clientId}
               style={{ width: "100%", padding: 12, borderRadius: 8, border: "1px solid #ccc" }}
             />
 
             <div style={{ marginTop: 10 }}>
-              <button onClick={generateAndSave} disabled={saving || !transcript.trim()}>
+              <button onClick={generateAndSave} disabled={saving || !transcript.trim() || !clientId}>
                 {saving ? "Generating..." : "Generate + Save"}
               </button>
             </div>
@@ -228,22 +296,22 @@ export default function App() {
             </pre>
           </div>
 
-          {/* Chat */}
           <div style={{ border: "1px solid #ddd", borderRadius: 10, padding: 14 }}>
             <h2 style={{ marginTop: 0 }}>Therapist Chat</h2>
             <div style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>
-              Queries <b>{clientName}</b> using saved session notes (isolated memory).
+              Queries <b>{clientName || "—"}</b> using saved session notes (isolated memory).
             </div>
 
             <input
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
-              placeholder="Ask about patterns, progress, follow-ups..."
+              placeholder={clientId ? "Ask about patterns, progress, follow-ups..." : "Select a client first..."}
+              disabled={!clientId}
               style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #ccc" }}
             />
 
             <div style={{ marginTop: 10, display: "flex", gap: 10 }}>
-              <button onClick={ask} disabled={asking || !question.trim()}>
+              <button onClick={ask} disabled={asking || !question.trim() || !clientId}>
                 {asking ? "Asking..." : "Ask"}
               </button>
               <button

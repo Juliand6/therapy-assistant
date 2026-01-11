@@ -3,7 +3,8 @@
   "threadsByClient": {
     "client_a": "8ce63a1f-dc12-4668-b301-61e184cf8d7b",
     "client_b": "a6994555-728b-4995-971f-9d36880b2e03",
-    "client_c": "335585e6-0f13-4234-8dcc-0096ddb951b2"
+    "client_c": "335585e6-0f13-4234-8dcc-0096ddb951b2",
+    "client_hwpy222": "6c0c6aa6-b728-47ef-a4e8-8bb7a7abd466"
   },
   "sessionsByClient": {
     "client_c": [
@@ -47,6 +48,25 @@
         "createdAt": "2026-01-11T03:17:25.768Z",
         "note": "**Session Note**\n\n**Summary:**\n- Client C expressed feelings of insecurity related to their physical appearance.\n- The client reported that these insecurities lead to feelings of nervousness.\n- The session focused on exploring the root causes of the client’s insecurity.\n- Client discussed how these feelings impact their social interactions and self-perception.\n- The need for strategies to manage appearance-related anxieties was identified.\n\n**Themes:**\n- Insecurity\n- Self-image\n- Anxiety\n- Self-esteem\n\n**Emotions Observed:**\n- Insecurity\n- Nervousness\n\n**Coping Strategies Mentioned:**\n- None mentioned\n\n**Risk Flags:**\n- None noted\n\n**Therapist Follow-ups:**\n- Explore the specific factors contributing to the client’s insecurity about their appearance.\n- Discuss how these insecurities affect the client's daily life and interactions.\n- Develop strategies to build self-esteem and positive self-image.\n- Encourage the client to identify positive qualities and attributes beyond physical appearance.\n- Assess any external pressures or influences that may be impacting the client’s self-image.\n\n**Next Session Focus:**\n- Continue discussing and developing strategies for boosting self-esteem.\n- Introduce techniques for managing nervousness related to self-image.\n- Explore broader impacts of self-esteem on the client's social and emotional well-being."
       }
+    ],
+    "client_hwpy222": [
+      {
+        "sessionNumber": 1,
+        "createdAt": "2026-01-11T19:31:29.420Z",
+        "note": "**Session Note:**\n\n**Summary:**\n- Client expresses feeling overwhelmed and behind on responsibilities during the past two weeks.\n- Reports difficulty balancing school responsibilities with personal expectations, contributing to stress and self-criticism.\n- Experiences trouble falling asleep due to racing thoughts about deadlines and performance.\n- Denies any suicidal ideation, self-harm, or intent to harm others.\n- Gains some relief when spending time with friends but experiences guilt for not being productive afterward.\n\n**Themes:**\n- Overwhelm\n- Stress management\n- Sleep disturbances\n- Self-criticism\n- Guilt\n- Social interactions vs. productivity\n\n**Emotions Observed:**\n- Overwhelmed\n- Stressed\n- Guilty\n- Critical\n\n**Coping Strategies Mentioned:**\n- Spending time with friends (offers temporary relief)\n\n**Risk Flags:**\n- None noted\n\n**Therapist Follow-ups:**\n- Explore deeper into the client's self-criticism and unrealistic personal expectations.\n- Discuss more structured time management techniques to help balance school and personal life.\n- Explore interventions to manage racing thoughts and improve sleep hygiene.\n- Discuss further the guilt associated with social activities and work on strategies to reframe these experiences.\n- Encourage the development of a balanced routine that includes relaxation and social time without guilt.\n\n**Next Session Focus:**\n- Delve into potential cognitive-behavioral strategies to address stress and self-criticism.\n- Consider relaxation techniques or mindfulness approaches for evening routine improvements.\n- Explore the role of friendship and social interaction in stress relief and emotional well-being."
+      },
+      {
+        "sessionNumber": 2,
+        "createdAt": "2026-01-11T19:34:02.473Z",
+        "note": "**Session Note:**\n\n**Summary:**\n- Client describes the past week as slightly improved but still stressful.\n- Completed thought-tracking homework on three occasions and identified a pattern of harsh self-talk related to deadlines.\n- Feels slightly more in control when recognizing these thoughts, though the practice feels forced.\n- Sleep improved on two nights thanks to a bedtime routine, but late nights remain due to schoolwork.\n- Denies any suicidal ideation or self-harm.\n- Expresses frustration about the perceived slowness of progress.\n\n**Themes:**\n- Stress management\n- Self-talk\n- Sleep hygiene\n- Time management\n- Frustration with progress\n\n**Emotions Observed:**\n- Stressed\n- In control (at times)\n- Frustrated\n\n**Coping Strategies Mentioned:**\n- Thought-tracking to identify negative self-talk\n- Bedtime routine (those nights led to better sleep)\n\n**Risk Flags:**\n- None noted\n\n**Therapist Follow-ups:**\n- Continue to support and refine the client's thought-tracking process to enhance comfort and effectiveness.\n- Reinforce the bedtime routine and discuss strategies to deal with schoolwork that disrupts sleep.\n- Address the feeling of forced practice and explore ways to integrate thought awareness more naturally.\n- Acknowledge the client's frustration with progress and set realistic expectations to boost motivation.\n- Explore further time management techniques to help alleviate school-related stress.\n\n**Next Session Focus:**\n- Build on effective sleep routines and address barriers to consistent bedtime habits.\n- Enhance the process of identifying and restructuring self-talk.\n- Set small, achievable goals to provide a sense of progress and achievement."
+      }
     ]
-  }
+  },
+  "clients": [
+    {
+      "id": "client_hwpy222",
+      "name": "Sebastian",
+      "createdAt": "2026-01-11T18:41:53.828Z"
+    }
+  ]
 }

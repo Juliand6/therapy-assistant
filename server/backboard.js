@@ -16,7 +16,7 @@ function loadStore() {
   try {
     return JSON.parse(fs.readFileSync(STORE_PATH, "utf8"));
   } catch {
-    return { assistantId: null, threadsByClient: {}, sessionsByClient: {} };
+    return { assistantId: null, threadsByClient: {}, sessionsByClient: {}, clients: [] };
   }
 }
 
@@ -35,9 +35,8 @@ function recordSession(clientId, sessionObj) {
 let store = loadStore();
 store.threadsByClient ||= {};
 store.sessionsByClient ||= {};
+store.clients ||= [];
 
-
-// ---- helpers ----
 async function bbPost(url, { json, form } = {}) {
   const opts = { method: "POST", headers: { ...HEADERS } };
 
@@ -78,11 +77,9 @@ async function ensureThreadForClient(clientId) {
 
   const assistantId = await ensureAssistant();
 
-  // If exists, return it
   const existing = store.threadsByClient?.[clientId];
   if (existing) return existing;
 
-  // Create new thread under assistant
   const t = await bbPost(`${BASE_URL}/assistants/${assistantId}/threads`, {
     json: {},
   });
@@ -95,7 +92,6 @@ async function ensureThreadForClient(clientId) {
   return threadId;
 }
 
-// (Optional) for demo: reset one client or all clients
 export async function bbResetClient(clientId) {
   if (!clientId) throw new Error("Missing clientId");
   delete store.threadsByClient[clientId];
@@ -107,7 +103,6 @@ export async function bbResetAll() {
   saveStore(store);
 }
 
-// ---- exported: summarize + store per client ----
 export async function bbSummarizeAndStore({ clientId, transcript, sessionNumber }) {
   const threadId = await ensureThreadForClient(clientId);
 
@@ -134,7 +129,6 @@ TRANSCRIPT:
 ${transcript}
 `.trim();
 
-  // 3) Send message (memory Auto) to THIS client's thread
   const resp = await bbPost(`${BASE_URL}/threads/${threadId}/messages`, {
     form: {
       content: prompt,
@@ -152,7 +146,6 @@ ${transcript}
 });
 
 
-  // Store a clean “SESSION NOTE” message as well (helps retrieval)
   await bbPost(`${BASE_URL}/threads/${threadId}/messages`, {
     form: {
       content: `SESSION NOTE #${sessionNumber ?? 1}\n${note}`,
@@ -192,4 +185,31 @@ export function bbGetSessions(clientId) {
   store.sessionsByClient ||= {};
   return store.sessionsByClient[clientId] || [];
 }
+
+function makeClientId() {
+  return `client_${Math.random().toString(36).slice(2, 9)}`;
+}
+
+export function bbListClients() {
+  return store.clients;
+}
+
+export function bbCreateClient(name) {
+  if (!name || !name.trim()) throw new Error("Client name is required");
+
+  const cleanName = name.trim();
+
+  const exists = store.clients.find(
+    (c) => c.name.toLowerCase() === cleanName.toLowerCase()
+  );
+  if (exists) return exists;
+
+  const client = { id: makeClientId(), name: cleanName, createdAt: new Date().toISOString() };
+  store.clients.push(client);
+  saveStore(store);
+
+
+  return client;
+}
+
 

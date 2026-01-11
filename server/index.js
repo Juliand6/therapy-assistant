@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import "dotenv/config";
 import { bbSummarizeAndStore, bbChat, bbGetSessions } from "./backboard.js";
+import { bbListClients, bbCreateClient } from "./backboard.js";
+
 
 
 
@@ -45,6 +47,21 @@ app.post("/api/chat", async (req, res) => {
     res.status(500).json({ error: e.message || "chat failed" });
   }
 });
+
+app.get("/api/clients", (req, res) => {
+  res.json({ clients: bbListClients() });
+});
+
+app.post("/api/clients", (req, res) => {
+  try {
+    const { name } = req.body;
+    const client = bbCreateClient(name);
+    res.json({ client });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
 
 
 
