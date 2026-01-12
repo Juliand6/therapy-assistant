@@ -243,7 +243,7 @@ export default function App() {
               </div>
 
               <p className="mt-3 text-xs text-slate-500">
-                Therapist-only demo. No diagnosis or medical advice.
+                No diagnosis or medical advice.
               </p>
             </div>
           </div>
@@ -714,9 +714,7 @@ function SessionsView({
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="text-sm font-semibold">Session Detail</div>
-              <div className="text-xs text-slate-500">
-                Clean structured layout • consistent sections • readable at a glance
-              </div>
+              
             </div>
           </div>
 
@@ -809,8 +807,8 @@ function ChatView({ client, messages, draft, setDraft, isThinking, onSend, snaps
       <Card className="lg:col-span-8 flex h-[70vh] flex-col p-0">
         <div className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4">
           <div className="min-w-0">
-            <div className="text-sm font-semibold">Conversation</div>
-            <div className="text-xs text-slate-500">Clean message bubbles and calm spacing</div>
+            <div className="text-sm font-semibold">AI Chat</div>
+            
           </div>
         </div>
 
