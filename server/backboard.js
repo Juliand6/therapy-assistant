@@ -108,22 +108,28 @@ export async function bbSummarizeAndStore({ clientId, transcript, sessionNumber 
 
   const prompt = `
 You are a therapist documentation assistant for licensed clinicians.
-You do NOT diagnose. You do NOT provide medical advice.
-You only summarize and organize the provided transcript.
+Use ONLY the provided transcript. Do not diagnose. Do not provide medical advice.
 
-Create a structured session note with:
-- Summary (5–7 bullets)
-- Themes (3–8 tags)
-- Emotions observed (list)
-- Coping strategies mentioned (list)
-- Risk flags (only if explicitly present; else "none noted")
-- Therapist follow-ups (3–6 bullets)
-- Next session focus (1–3 bullets)
+Output VALID JSON ONLY (no markdown, no commentary) matching this schema:
 
-Return plain text.
+{
+  "summary": ["bullet", "bullet"],
+  "themes": ["tag", "tag"],
+  "emotions_observed": ["item", "item"],
+  "coping_strategies": ["item", "item"],
+  "risk_flags": [],
+  "therapist_followups": ["bullet", "bullet"],
+  "next_session_focus": ["bullet", "bullet"],
+  "quotes": ["short quote", "short quote"]
+}
 
-CLIENT: ${clientId}
+Rules:
+- If risk is not explicitly present, return "risk_flags": [].
+- "quotes" must be short phrases directly from the transcript (optional: 0–3 items).
+- Keep lists concise (2–7 items each).
+
 SESSION #: ${sessionNumber ?? 1}
+CLIENT: ${clientId}
 
 TRANSCRIPT:
 ${transcript}
@@ -137,25 +143,103 @@ ${transcript}
     },
   });
 
-  const note = resp?.content ?? JSON.stringify(resp);
+  const raw = resp?.content ?? "";
+
+  let noteObj;
+  try {
+    noteObj = JSON.parse(raw);
+  } catch {
+    const start = raw.indexOf("{");
+    const end = raw.lastIndexOf("}");
+    if (start !== -1 && end !== -1 && end > start) {
+      const maybeJson = raw.slice(start, end + 1);
+      try {
+        noteObj = JSON.parse(maybeJson);
+      } catch {
+        noteObj = { error: "Structured note was not valid JSON", raw };
+      }
+    } else {
+      noteObj = { error: "Structured note was not valid JSON", raw };
+    }
+  }
 
   recordSession(clientId, {
-  sessionNumber: sessionNumber ?? (store.sessionsByClient?.[clientId]?.length ?? 0) + 1,
-  createdAt: new Date().toISOString(),
-  note,
-});
+    sessionNumber: sessionNumber ?? (store.sessionsByClient?.[clientId]?.length ?? 0) + 1,
+    createdAt: new Date().toISOString(),
+    note: noteObj,
+  });
 
+  const noteAsText =
+    noteObj && !noteObj.error ? JSON.stringify(noteObj, null, 2) : String(raw);
 
   await bbPost(`${BASE_URL}/threads/${threadId}/messages`, {
     form: {
-      content: `SESSION NOTE #${sessionNumber ?? 1}\n${note}`,
+      content: `SESSION NOTE #${sessionNumber ?? 1}\n${noteAsText}`,
       stream: "false",
       memory: "Auto",
     },
   });
 
-  return note;
+ 
+  return noteObj;
 }
+
+
+export async function bbClientSnapshot(clientId) {
+  const threadId = await ensureThreadForClient(clientId);
+
+  const prompt = `
+You are a therapist-facing session memory assistant.
+Using ONLY information in this client's saved SESSION NOTE messages in this thread,
+output VALID JSON ONLY (no markdown, no commentary) matching this schema:
+
+{
+  "primary_themes": ["tag", "tag"],
+  "progress_since_first": ["bullet", "bullet"],
+  "current_challenges": ["bullet", "bullet"],
+  "coping_strategies_tried": ["item", "item"],
+  "risk_flags": [],
+  "suggested_next_focus": ["bullet", "bullet"],
+  "confidence": "low" | "medium" | "high"
+}
+
+Rules:
+- If risk flags are not explicitly mentioned, return "risk_flags": [].
+- If there isn’t enough information, keep arrays short and set confidence to "low".
+- Do not diagnose. Do not provide medical advice.
+`.trim();
+
+  const resp = await bbPost(`${BASE_URL}/threads/${threadId}/messages`, {
+    form: {
+      content: prompt,
+      stream: "false",
+      memory: "Auto",
+    },
+  });
+
+  const raw = resp?.content ?? "";
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    const start = raw.indexOf("{");
+    const end = raw.lastIndexOf("}");
+    if (start !== -1 && end !== -1 && end > start) {
+      const maybeJson = raw.slice(start, end + 1);
+      try {
+        return JSON.parse(maybeJson);
+      } catch {
+      }
+    }
+
+    return {
+      error: "Snapshot was not valid JSON",
+      raw,
+    };
+  }
+}
+
+
 
 export async function bbChat({ clientId, question }) {
   const threadId = await ensureThreadForClient(clientId);

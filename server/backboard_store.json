@@ -4,7 +4,9 @@
     "client_a": "8ce63a1f-dc12-4668-b301-61e184cf8d7b",
     "client_b": "a6994555-728b-4995-971f-9d36880b2e03",
     "client_c": "335585e6-0f13-4234-8dcc-0096ddb951b2",
-    "client_hwpy222": "6c0c6aa6-b728-47ef-a4e8-8bb7a7abd466"
+    "client_hwpy222": "6c0c6aa6-b728-47ef-a4e8-8bb7a7abd466",
+    "client_p4uqkpy": "0b3286e2-1b24-437a-9839-3793fbaf6641",
+    "client_r3vmr7h": "6ed1ec8c-fcf5-48f5-99aa-06da07535ced"
   },
   "sessionsByClient": {
     "client_c": [
@@ -59,6 +61,45 @@
         "sessionNumber": 2,
         "createdAt": "2026-01-11T19:34:02.473Z",
         "note": "**Session Note:**\n\n**Summary:**\n- Client describes the past week as slightly improved but still stressful.\n- Completed thought-tracking homework on three occasions and identified a pattern of harsh self-talk related to deadlines.\n- Feels slightly more in control when recognizing these thoughts, though the practice feels forced.\n- Sleep improved on two nights thanks to a bedtime routine, but late nights remain due to schoolwork.\n- Denies any suicidal ideation or self-harm.\n- Expresses frustration about the perceived slowness of progress.\n\n**Themes:**\n- Stress management\n- Self-talk\n- Sleep hygiene\n- Time management\n- Frustration with progress\n\n**Emotions Observed:**\n- Stressed\n- In control (at times)\n- Frustrated\n\n**Coping Strategies Mentioned:**\n- Thought-tracking to identify negative self-talk\n- Bedtime routine (those nights led to better sleep)\n\n**Risk Flags:**\n- None noted\n\n**Therapist Follow-ups:**\n- Continue to support and refine the client's thought-tracking process to enhance comfort and effectiveness.\n- Reinforce the bedtime routine and discuss strategies to deal with schoolwork that disrupts sleep.\n- Address the feeling of forced practice and explore ways to integrate thought awareness more naturally.\n- Acknowledge the client's frustration with progress and set realistic expectations to boost motivation.\n- Explore further time management techniques to help alleviate school-related stress.\n\n**Next Session Focus:**\n- Build on effective sleep routines and address barriers to consistent bedtime habits.\n- Enhance the process of identifying and restructuring self-talk.\n- Set small, achievable goals to provide a sense of progress and achievement."
+      },
+      {
+        "sessionNumber": 3,
+        "createdAt": "2026-01-11T22:52:19.941Z",
+        "note": "**Session Note:**\n\n**Summary:**\n- Client reports heightened stress due to midterm exams, feeling as though they are \"back in panic mode\" and \"regressing.\"\n- Experiences increased muscle tension and headaches during study periods.\n- Has been skipping social activities to focus on studying, leading to feelings of isolation and irritability.\n- Attempted to use cognitive reframing strategies but found it challenging under pressure.\n- Denies any suicidal ideation, self-harm, or substance use.\n\n**Themes:**\n- Exam stress\n- Regression concerns\n- Physical symptoms (muscle tension, headaches)\n- Social isolation\n- Cognitive reframing\n\n**Emotions Observed:**\n- Stressed\n- Panicked\n- Isolated\n- Irritable\n\n**Coping Strategies Mentioned:**\n- Cognitive reframing (challenging under pressure)\n\n**Risk Flags:**\n- None noted\n\n**Therapist Follow-ups:**\n- Explore additional stress management techniques tailored to high-pressure situations like exams.\n- Discuss ways to integrate relaxation techniques to alleviate physical symptoms such as muscle tension and headaches.\n- Encourage maintaining a balance between study and social activities to reduce feelings of isolation.\n- Evaluate the client's current cognitive reframing techniques and adjust to be more effective during stress peaks.\n\n**Next Session Focus:**\n- Develop strategies to effectively manage exam-related stress.\n- Reinforce and adapt cognitive reframing techniques for use under pressure.\n- Address the impact of social isolation and methods to maintain connections during busy periods."
+      },
+      {
+        "sessionNumber": 4,
+        "createdAt": "2026-01-12T00:11:59.318Z",
+        "note": {
+          "summary": [
+            "Client feels emotionally drained and is questioning if their academic goals justify the stress.",
+            "Reports feeling disconnected from peers and unsure how to discuss stress without feeling burdensome."
+          ],
+          "themes": [
+            "Emotional exhaustion",
+            "Academic pressure",
+            "Social disconnection",
+            "Procrastination"
+          ],
+          "emotions_observed": [
+            "Drained",
+            "Disconnected"
+          ],
+          "coping_strategies": [],
+          "risk_flags": [],
+          "therapist_followups": [
+            "Explore the client's academic goals and stress management.",
+            "Discuss ways to communicate stress effectively without feeling burdensome."
+          ],
+          "next_session_focus": [
+            "Address the impact of academic stress and explore realistic goal setting.",
+            "Identify strategies to improve peer connection and communication."
+          ],
+          "quotes": [
+            "worth this level of stress",
+            "shut off"
+          ]
+        }
       }
     ]
   },
@@ -67,6 +108,16 @@
       "id": "client_hwpy222",
       "name": "Sebastian",
       "createdAt": "2026-01-11T18:41:53.828Z"
+    },
+    {
+      "id": "client_p4uqkpy",
+      "name": "Julian",
+      "createdAt": "2026-01-11T22:55:06.420Z"
+    },
+    {
+      "id": "client_r3vmr7h",
+      "name": "Sam",
+      "createdAt": "2026-01-11T22:58:08.587Z"
     }
   ]
 }

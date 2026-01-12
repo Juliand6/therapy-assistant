@@ -3,23 +3,26 @@ import { useEffect, useMemo, useState } from "react";
 const API_BASE = "http://localhost:8080";
 
 export default function App() {
-  // Clients (loaded from server)
+
+  const [snapshot, setSnapshot] = useState(null);
+  const [loadingSnapshot, setLoadingSnapshot] = useState(false);
+
+
   const [clients, setClients] = useState([]);
   const [clientId, setClientId] = useState("");
   const [newClientName, setNewClientName] = useState("");
   const [creatingClient, setCreatingClient] = useState(false);
 
-  // Add session
+
+
   const [transcript, setTranscript] = useState("");
   const [sessionNumber, setSessionNumber] = useState(1);
-  const [note, setNote] = useState("");
+  const [note, setNote] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  // Past sessions (per client)
   const [sessions, setSessions] = useState([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
 
-  // Chat
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [asking, setAsking] = useState(false);
@@ -36,7 +39,6 @@ export default function App() {
 
     setClients(data.clients || []);
 
-    // If no client selected yet, pick the first
     if (!clientId && data.clients?.length) {
       setClientId(data.clients[0].id);
     }
@@ -63,17 +65,16 @@ export default function App() {
 
   useEffect(() => {
     fetchClients().catch(console.error);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    // when switching clients, clear UI + load that client’s sessions
     setNote("");
     setAnswer("");
     setQuestion("");
     setTranscript("");
     fetchSessions(clientId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchSnapshot(clientId);
+
   }, [clientId]);
 
   async function createClient() {
@@ -90,7 +91,6 @@ export default function App() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to create client");
 
-      // refresh client list, then select the new one
       await fetchClients();
       setClientId(data.client.id);
 
@@ -158,6 +158,120 @@ export default function App() {
     }
   }
 
+  async function fetchSnapshot(forClientId = clientId) {
+  if (!forClientId) return;
+
+  setLoadingSnapshot(true);
+  setSnapshot("");
+  try {
+    const res = await fetch(`${API_BASE}/api/clients/${forClientId}/snapshot`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error || "Failed to load snapshot");
+    setSnapshot(data.snapshot || null);
+  } catch (err) {
+    setSnapshot(`Error loading snapshot: ${err.message}`);
+  } finally {
+    setLoadingSnapshot(false);
+  }
+}
+
+function Chip({ text }) {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        padding: "4px 10px",
+        borderRadius: 999,
+        border: "1px solid #ddd",
+        background: "#fafafa",
+        fontSize: 12,
+        marginRight: 8,
+        marginBottom: 8,
+      }}
+    >
+      {text}
+    </span>
+  );
+}
+
+function Section({ title, items, emptyText = "—" }) {
+  return (
+    <div style={{ border: "1px solid #eee", borderRadius: 10, padding: 12, background: "#fff" }}>
+      <div style={{ fontWeight: 700, marginBottom: 8 }}>{title}</div>
+      {Array.isArray(items) && items.length > 0 ? (
+        <ul style={{ margin: 0, paddingLeft: 18 }}>
+          {items.map((x, i) => (
+            <li key={i} style={{ marginBottom: 6, color: "#333" }}>
+              {x}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div style={{ color: "#777" }}>{emptyText}</div>
+      )}
+    </div>
+  );
+}
+
+function NoteCard({ note }) {
+  if (!note) return <div style={{ color: "#777" }}>No note yet.</div>;
+
+  if (note.error) {
+    return (
+      <div>
+        <div style={{ color: "#b00020", fontWeight: 700 }}>Note parse error</div>
+        <pre style={{ whiteSpace: "pre-wrap", background: "#f6f6f6", padding: 12, borderRadius: 10 }}>
+          {note.raw}
+        </pre>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "grid", gap: 12 }}>
+      {/* Themes */}
+      <div style={{ border: "1px solid #eee", borderRadius: 12, padding: 12, background: "#fff" }}>
+        <div style={{ fontWeight: 700, marginBottom: 8 }}>Themes</div>
+        <div>
+          {(note.themes || []).map((t, i) => (
+            <Chip key={i} text={t} />
+          ))}
+          {(!note.themes || note.themes.length === 0) && <span style={{ color: "#777" }}>—</span>}
+        </div>
+      </div>
+
+      {/* Main sections */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <Section title="Summary" items={note.summary} />
+        <Section title="Emotions observed" items={note.emotions_observed} />
+        <Section title="Coping strategies" items={note.coping_strategies} />
+        <Section title="Risk flags" items={note.risk_flags} emptyText="None noted" />
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <Section title="Therapist follow-ups" items={note.therapist_followups} />
+        <Section title="Next session focus" items={note.next_session_focus} />
+      </div>
+
+      {/* Quotes (optional) */}
+      {Array.isArray(note.quotes) && note.quotes.length > 0 && (
+        <div style={{ border: "1px solid #eee", borderRadius: 12, padding: 12, background: "#fff" }}>
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>Key quotes</div>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            {note.quotes.map((q, i) => (
+              <li key={i} style={{ marginBottom: 6 }}>
+                “{q}”
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+
   return (
     <div style={{ maxWidth: 1100, margin: "40px auto", fontFamily: "system-ui" }}>
       <h1 style={{ marginBottom: 6 }}>Therapy Assistant (MVP)</h1>
@@ -190,6 +304,9 @@ export default function App() {
               onChange={(e) => setNewClientName(e.target.value)}
               placeholder="e.g., Sam"
               style={{ padding: 8, minWidth: 220 }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") createClient();
+              }}
             />
           </label>
 
@@ -204,48 +321,119 @@ export default function App() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 18, alignItems: "start" }}>
-        {/* LEFT: Past sessions */}
-        <div style={{ border: "1px solid #ddd", borderRadius: 10, padding: 14 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <h2 style={{ marginTop: 0 }}>Past Sessions</h2>
-            <button onClick={() => fetchSessions(clientId)} disabled={loadingSessions || !clientId}>
-              {loadingSessions ? "Refreshing..." : "Refresh"}
-            </button>
+        {/* LEFT COLUMN */}
+        <div>
+          {/* Snapshot Card */}
+          <div
+            style={{
+              border: "1px solid #ddd",
+              borderRadius: 14,
+              padding: 14,
+              marginBottom: 18,
+              background: "#fff",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h2 style={{ margin: 0 }}>Client Snapshot</h2>
+                <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
+                  Confidence: <b>{snapshot?.confidence ?? "—"}</b>
+                </div>
+              </div>
+
+              <button onClick={() => fetchSnapshot(clientId)} disabled={loadingSnapshot || !clientId}>
+                {loadingSnapshot ? "Updating..." : "Refresh"}
+              </button>
+            </div>
+
+            {!clientId ? (
+              <div style={{ color: "#777", marginTop: 10 }}>Select a client.</div>
+            ) : loadingSnapshot ? (
+              <div style={{ color: "#777", marginTop: 10 }}>Generating snapshot…</div>
+            ) : snapshot?.error ? (
+              <div style={{ marginTop: 10 }}>
+                <div style={{ color: "#b00020", fontWeight: 700 }}>Snapshot parse error</div>
+                <pre style={{ whiteSpace: "pre-wrap", background: "#f6f6f6", padding: 12, borderRadius: 10 }}>
+                  {snapshot.raw}
+                </pre>
+              </div>
+            ) : snapshot ? (
+              <div style={{ marginTop: 12 }}>
+                <div style={{ marginBottom: 10 }}>
+                  {(snapshot.primary_themes || []).map((t, i) => (
+                    <Chip key={i} text={t} />
+                  ))}
+                  {(!snapshot.primary_themes || snapshot.primary_themes.length === 0) && (
+                    <span style={{ color: "#777" }}>No themes yet.</span>
+                  )}
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <Section title="Progress since first" items={snapshot.progress_since_first} />
+                  <Section title="Current challenges" items={snapshot.current_challenges} />
+                  <Section title="Coping strategies tried" items={snapshot.coping_strategies_tried} />
+                  <Section title="Risk flags" items={snapshot.risk_flags} emptyText="None noted" />
+                </div>
+
+                <div style={{ marginTop: 12 }}>
+                  <Section title="Suggested next session focus" items={snapshot.suggested_next_focus} />
+                </div>
+              </div>
+            ) : (
+              <div style={{ color: "#777", marginTop: 10 }}>No snapshot yet. Add a session first.</div>
+            )}
           </div>
 
-          {!clientId ? (
-            <p style={{ color: "#666" }}>Create or select a client to view sessions.</p>
-          ) : loadingSessions ? (
-            <p style={{ color: "#666" }}>Loading sessions…</p>
-          ) : sessions.length === 0 ? (
-            <p style={{ color: "#666" }}>No sessions saved for this client yet.</p>
-          ) : (
-            <div style={{ display: "grid", gap: 10 }}>
-              {sessions
-                .slice()
-                .reverse()
-                .map((s, idx) => (
-                  <div
-                    key={`${s.sessionNumber}-${idx}`}
-                    style={{ border: "1px solid #eee", borderRadius: 8, padding: 10, background: "#fafafa" }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-                      <b>Session #{s.sessionNumber}</b>
-                      <span style={{ color: "#777", fontSize: 12 }}>
-                        {s.createdAt ? new Date(s.createdAt).toLocaleString() : ""}
-                      </span>
-                    </div>
-                    <pre style={{ margin: "8px 0 0", whiteSpace: "pre-wrap" }}>
-                      {typeof s.note === "string" ? s.note : JSON.stringify(s.note)}
-                    </pre>
-                  </div>
-                ))}
+          {/* Past Sessions */}
+          <div style={{ border: "1px solid #ddd", borderRadius: 10, padding: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h2 style={{ marginTop: 0 }}>Past Sessions</h2>
+              <button onClick={() => fetchSessions(clientId)} disabled={loadingSessions || !clientId}>
+                {loadingSessions ? "Refreshing..." : "Refresh"}
+              </button>
             </div>
-          )}
+
+            {!clientId ? (
+              <p style={{ color: "#666" }}>Create or select a client to view sessions.</p>
+            ) : loadingSessions ? (
+              <p style={{ color: "#666" }}>Loading sessions…</p>
+            ) : sessions.length === 0 ? (
+              <p style={{ color: "#666" }}>No sessions saved for this client yet.</p>
+            ) : (
+              <div style={{ display: "grid", gap: 10 }}>
+                {sessions
+                  .slice()
+                  .reverse()
+                  .map((s, idx) => (
+                    <div
+                      key={`${s.sessionNumber}-${idx}`}
+                      style={{
+                        border: "1px solid #eee",
+                        borderRadius: 10,
+                        padding: 10,
+                        background: "#fafafa",
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                        <b>Session #{s.sessionNumber}</b>
+                        <span style={{ color: "#777", fontSize: 12 }}>
+                          {s.createdAt ? new Date(s.createdAt).toLocaleString() : ""}
+                        </span>
+                      </div>
+                      <div style={{ marginTop: 10 }}>
+  <NoteCard note={s.note} />
+</div>
+
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* RIGHT: Add session + chat */}
+        {/* RIGHT COLUMN */}
         <div style={{ display: "grid", gap: 18 }}>
+          {/* Add Session */}
           <div style={{ border: "1px solid #ddd", borderRadius: 10, padding: 14 }}>
             <h2 style={{ marginTop: 0 }}>Add Session</h2>
 
@@ -281,21 +469,14 @@ export default function App() {
               </button>
             </div>
 
-            <h3 style={{ marginTop: 16 }}>Latest Structured Note</h3>
-            <pre
-              style={{
-                background: "#f6f6f6",
-                padding: 12,
-                borderRadius: 8,
-                border: "1px solid #eee",
-                whiteSpace: "pre-wrap",
-                minHeight: 120,
-              }}
-            >
-              {note || "No note yet."}
-            </pre>
+           <h3 style={{ marginTop: 16 }}>Latest Structured Note</h3>
+<div style={{ background: "#f6f6f6", padding: 12, borderRadius: 12, border: "1px solid #eee" }}>
+  <NoteCard note={note} />
+</div>
+
           </div>
 
+          {/* Chat */}
           <div style={{ border: "1px solid #ddd", borderRadius: 10, padding: 14 }}>
             <h2 style={{ marginTop: 0 }}>Therapist Chat</h2>
             <div style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>

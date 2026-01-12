@@ -3,6 +3,8 @@ import cors from "cors";
 import "dotenv/config";
 import { bbSummarizeAndStore, bbChat, bbGetSessions } from "./backboard.js";
 import { bbListClients, bbCreateClient } from "./backboard.js";
+import { bbClientSnapshot } from "./backboard.js";
+
 
 
 
@@ -61,6 +63,20 @@ app.post("/api/clients", (req, res) => {
     res.status(400).json({ error: e.message });
   }
 });
+
+app.get("/api/clients/:clientId/snapshot", async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    if (!clientId) return res.status(400).json({ error: "Missing clientId" });
+
+    const snapshot = await bbClientSnapshot(clientId);
+    res.json({ snapshot });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message || "snapshot failed" });
+  }
+});
+
 
 
 
