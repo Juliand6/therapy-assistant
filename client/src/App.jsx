@@ -32,22 +32,21 @@ export default function App() {
   const [search, setSearch] = useState("");
   const [newClientName, setNewClientName] = useState("");
 
-  // Add session
+  // add session
   const [transcript, setTranscript] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [latestNote, setLatestNote] = useState(null);
 
-  // Snapshot
+  // snapshot
   const [snapshot, setSnapshot] = useState(null);
   const [isSnapshotLoading, setIsSnapshotLoading] = useState(false);
 
-  // Chat
+  // chat
   const [chatDraft, setChatDraft] = useState("");
   const [isChatThinking, setIsChatThinking] = useState(false);
-  const [chatByClient, setChatByClient] = useState({}); // { [clientId]: Message[] }
+  const [chatByClient, setChatByClient] = useState({}); 
   const chatEndRef = useRef(null);
 
-  // ---------- Derived ----------
   const activeClient = useMemo(
     () => clients.find((c) => c.id === activeClientId) || null,
     [clients, activeClientId]
@@ -82,7 +81,7 @@ export default function App() {
     [sessionsByClient, activeClientId]
   );
 
-  // Effects 
+  // effects 
   useEffect(() => {
     if (!activeClientId) return;
     setSelectedSessionId(null);
@@ -163,6 +162,29 @@ export default function App() {
     setSnapshot(buildSnapshotFromSessions(list));
     setIsSnapshotLoading(false);
   }
+
+  async function uploadPdfAndFillTranscript(file) {
+  if (!file) return;
+
+  const form = new FormData();
+  form.append("file", file);
+
+  const resp = await fetch("http://localhost:8080/api/intake/pdf", {
+    method: "POST",
+    body: form,
+  });
+
+  const data = await resp.json();
+  if (!resp.ok) throw new Error(data?.error || "Upload failed");
+
+  if (data?.warning) {
+    console.warn(data.warning);
+  }
+
+  setTranscript(data.text || "");
+  setNav("dashboard");
+}
+
 
   async function sendChat() {
     const q = chatDraft.trim();
@@ -421,6 +443,7 @@ export default function App() {
                 isGenerating={isGenerating}
                 onGenerate={generateAndSaveSession}
                 latestNote={latestNote}
+                uploadPdfAndFillTranscript={uploadPdfAndFillTranscript}
                 onGoSessions={() => setNav("sessions")}
                 onGoChat={() => setNav("chat")}
               />
@@ -481,6 +504,7 @@ function DashboardView({
   latestNote,
   onGoSessions,
   onGoChat,
+  uploadPdfAndFillTranscript,
 }) {
   const hasSessions = sessions.length > 0;
 
@@ -567,6 +591,32 @@ function DashboardView({
             </div>
 
             <div className="mt-4">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+  <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 active:scale-[0.98]">
+    <input
+      type="file"
+      accept="application/pdf,.pdf"
+      className="hidden"
+      onChange={async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+      
+          await uploadPdfAndFillTranscript(file);
+        } catch (err) {
+          alert(err.message || "Failed to load PDF");
+        } finally {
+          e.target.value = ""; 
+        }
+      }}
+    />
+    <FileText className="h-4 w-4 text-blue-600" />
+    Upload PDF
+  </label>
+
+</div>
+
               <textarea
                 value={transcript}
                 onChange={(e) => setTranscript(e.target.value)}

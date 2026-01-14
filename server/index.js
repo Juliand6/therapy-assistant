@@ -5,6 +5,11 @@ import { bbSummarizeAndStore, bbChat, bbGetSessions } from "./backboard.js";
 import { bbListClients, bbCreateClient } from "./backboard.js";
 import { bbClientSnapshot } from "./backboard.js";
 
+import multer from "multer";
+import { PDFParse } from "pdf-parse";
+
+
+
 
 
 
@@ -77,6 +82,39 @@ app.get("/api/clients/:clientId/snapshot", async (req, res) => {
   }
 });
 
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 12 * 1024 * 1024 }, // 12MB
+});
+
+app.post("/api/intake/pdf", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file?.buffer) {
+      return res.status(400).json({ error: "No PDF uploaded (missing file buffer)." });
+    }
+
+    const parser = new PDFParse({ data: req.file.buffer });
+    const result = await parser.getText(); 
+    await parser.destroy();
+
+    const text = (result?.text || "").trim();
+
+    if (!text) {
+      return res.status(200).json({
+        text: "",
+        warning: "No extractable text found. This PDF may be scanned images (OCR not enabled in MVP).",
+      });
+    }
+
+    return res.json({ text });
+  } catch (err) {
+    console.error("PDF intake error:", err);
+    return res.status(500).json({
+      error: "Failed to extract text from PDF.",
+      details: err?.message || String(err),
+    });
+  }
+});
 
 
 
